@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Plagiarism Checker - UIN Sunan Gunung Djati Bandung</title>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Fade Animation */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Glass Effect */
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            background: rgba(241, 245, 249, 0.8);
+            padding: 0.4rem;
+            border-radius: 1rem;
+        }
+
+        .active-tab,
+        .inactive-tab {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.8rem;
+            font-weight: 600;
+            border-radius: 0.8rem;
+            transition: 0.3s;
+            cursor: pointer;
+            background: white;
+        }
+
+        /* TAB AKTIF — teks biru */
+        .active-tab {
+            color: #2563eb;
+            border: 1px solid #2563eb33;
+        }
+
+        /* TAB NONAKTIF — teks abu */
+        .inactive-tab {
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* HOVER — background tetap putih, teks jadi biru */
+        .inactive-tab:hover {
+            color: #2563eb;
+        }
+
+        /* Upload area */
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            padding: 3rem;
+            border-radius: 1.25rem;
+            text-align: center;
+            transition: 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #60a5fa;
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .upload-icon {
+            padding: 1rem;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            background: rgba(191, 219, 254, 0.5);
+            border-radius: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .upload-btn {
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(to right, #2563eb, #4f46e5);
+            color: white;
+            padding: 0.85rem 2.5rem;
+            border-radius: 0.8rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .upload-btn:hover {
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Uploaded file validation area */
+        .upload-valid {
+            text-align: center;
+            padding: 1rem;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .change-file-btn {
+            display: inline-flex;
+            align-items: center;
+            background: #f1f5f9;
+            border: 1px solid #dbeafe;
+            color: #2563eb;
+            padding: 0.6rem 1.3rem;
+            border-radius: 0.7rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .change-file-btn:hover {
+            background: #e2e8f0;
+        }
+
+        /* File info */
+        .file-info {
+            margin-top: 1rem;
+            display: inline-flex;
+            padding: 0.7rem 1rem;
+            background: white;
+            border-radius: 0.6rem;
+            border: 1px solid #d1fae5;
+            align-items: center;
+        }
+
+        #file-info {
+            display: none;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #file-info.show {
+            display: block;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Text input */
+        .text-input {
+            width: 100%;
+            height: 280px;
+            padding: 1.5rem;
+            border: 1px solid #e2e8f0;
+            background: rgba(255,255,255,0.5);
+            border-radius: 1rem;
+            resize: none;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .text-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+
+        /* CHECK BUTTON */
+        .btn-check {
+            width: 100%;
+            background: linear-gradient(to right, #2563eb, #4f46e5);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 18px;
+            display: flex;
+            justify-content: center;  
+            align-items: center;
+            gap: 10px;
+            transition: 0.3s;
+        }
+
+        .btn-check:hover {
+            box-shadow: 0 5px 18px rgba(59, 130, 246, 0.35);
+        }
+
+        /* Reset button */
+        .btn-reset {
+            padding: 14px 26px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #475569;
+            transition: 0.3s;
+        }
+
+        .btn-reset:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        /* Disabled state */
+        .disabled-btn {
+            background: linear-gradient(to right, #c7d2fe, #e0e7ff) !important;
+            color: #f1f5f9 !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+        }
+
+        .disabled-btn i {
+            color: #e2e8f0 !important;
+        }
+
+        /* Progress bar */
+        .progress {
+            width: 100%;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 9999px;
+            margin-top: 0.8rem;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            width: 0%;
+            transition: width 1s;
+        }
+
+        /* Footer */
+        .footer-info {
+            background: rgba(255,255,255,0.8);
+            padding: 0.7rem 1.5rem;
+            border-radius: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            border: 1px solid #f1f5f9;
+        }
+
+        /* JOIN BUTTON */
+        .join-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.55rem 1.1rem;
+            border-radius: 0.55rem;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+            font-weight: 600;
+            transition: 0.25s;
+        }
+
+        .join-btn:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+        }
+
+        /* HIGHLIGHT COLORS - SAMA DENGAN NOTEBOOK */
+        .highlight-red {
+            background-color: #fee2e2 !important;
+            color: #dc2626 !important;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: 600;
+            border: 1px solid #fca5a5;
+        }
+
+        .highlight-yellow {
+            background-color: #fef3c7 !important;
+            color: #d97706 !important;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: 500;
+            border: 1px solid #fbbf24;
+        }
+
+        .highlight-blue {
+            background-color: #dbeafe !important;
+            color: #2563eb !important;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: 500;
+            border: 1px solid #93c5fd;
+        }
+
+        /* Score badges */
+        .score-badge-red {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .score-badge-yellow {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .score-badge-blue {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .score-badge-green {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .score-badge-gray {
+            background: linear-gradient(135deg, #9ca3af, #6b7280);
+            color: white;
+        }
+
+        /* Matching text box */
+        .matching-text {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .matching-text-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+
+        .legend-red {
+            background-color: #fee2e2;
+            border: 1px solid #fca5a5;
+        }
+
+        .legend-yellow {
+            background-color: #fef3c7;
+            border: 1px solid #fbbf24;
+        }
+
+        .legend-blue {
+            background-color: #dbeafe;
+            border: 1px solid #93c5fd;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .empty-state-icon {
+            margin: 0 auto 1.5rem;
+            width: 80px;
+            height: 80px;
+            background: #f1f5f9;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+
+        <!-- Header -->
+        <div class="text-center mb-12 fade-in">
+            <div class="inline-flex items-center justify-center p-3 bg-white/80 glass-effect rounded-2xl shadow-sm mb-6 border border-blue-100/50">
+                <div class="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg">
+                    <i data-lucide="search" class="w-8 h-8 text-white"></i>
+                </div>
+            </div>
+
+            <h1 class="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+                Plagiarism Checker
+            </h1>
+
+            <p class="text-slate-600 text-xl font-light max-w-2xl mx-auto leading-relaxed">
+                Sistem Deteksi Plagiarisme Jurnal Informatika Berbasis Dataset JOIN UIN Sunan Gunung Djati Bandung
+            </p>
+
+            <!-- JOIN Button -->
+            <a href="https://join.if.uinsgd.ac.id/index.php/join" target="_blank" rel="noopener noreferrer" class="join-btn mt-3 inline-flex items-center">
+                <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
+                JOIN UIN Sunan Gunung Djati Bandung
+            </a>
+        </div>
+
+        <!-- MAIN CARD -->
+        <div class="bg-white/80 glass-effect rounded-3xl shadow-sm border border-white/60 p-8 mb-8 fade-in">
+
+            <!-- Tabs -->
+            <div class="tabs w-fit mx-auto mb-8">
+                <button id="upload-tab" class="active-tab">
+                    <i data-lucide="upload" class="w-5 h-5 mr-3"></i>
+                    Upload Dokumen
+                </button>
+
+                <button id="text-tab" class="inactive-tab">
+                    <i data-lucide="file-text" class="w-5 h-5 mr-3"></i>
+                    Ketik Teks
+                </button>
+            </div>
+
+            <!-- Upload Tab Content -->
+            <div id="upload-content">
+                <div id="upload-area" class="upload-area group relative">
+                    <!-- DEFAULT STATE (Before Upload) -->
+                    <div id="upload-default" class="text-center">
+                        <div class="upload-icon">
+                            <i data-lucide="upload" class="w-10 h-10 text-blue-600"></i>
+                        </div>
+
+                        <p class="text-slate-700 text-lg font-medium mb-2">Upload dokumen untuk dicek</p>
+                        <p class="text-sm text-slate-500 mb-6">Format: PDF, DOCX, TXT</p>
+
+                        <input type="file" accept=".pdf,.docx,.txt" id="file-upload" class="hidden" />
+                        <label for="file-upload" class="upload-btn inline-flex items-center">
+                            <i data-lucide="upload" class="w-5 h-5 mr-2"></i>
+                            Pilih File
+                        </label>
+                    </div>
+
+                    <!-- VALIDATION STATE (After Upload) -->
+                    <div id="upload-valid" class="upload-valid hidden">
+                        <div class="flex items-center justify-center mb-4">
+                            <i data-lucide="check-circle" class="w-10 h-10 text-emerald-600 mr-3"></i>
+                            <div>
+                                <p class="text-slate-700 font-semibold text-lg">File berhasil diupload</p>
+                                <p id="uploaded-file-name" class="text-slate-500 text-sm"></p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-center gap-3">
+                            <label for="file-upload" class="change-file-btn inline-flex items-center">
+                                <i data-lucide="refresh-ccw" class="w-4 h-4 mr-2"></i>
+                                Ganti File
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- fallback small file info (keamanan) -->
+                    <div id="file-info" class="file-info hidden mt-4 inline-flex items-center justify-center rounded-lg p-2">
+                        <i data-lucide="file" class="w-5 h-5 text-emerald-600 mr-2"></i>
+                        <span id="file-name" class="font-medium text-slate-800"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Tab Content -->
+            <div id="text-content" class="hidden fade-in">
+                <div class="relative">
+                    <textarea id="text-input" placeholder="Ketik atau paste teks di sini..." class="text-input"></textarea>
+                    <div class="absolute bottom-4 right-4 text-sm text-slate-400">
+                        <span id="char-count">0</span> karakter
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-4 mt-8 pt-6 border-t border-slate-100">
+                <button id="check-btn" class="btn-check w-full disabled-btn flex items-center justify-center gap-2" disabled>
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                    <span>Cek Plagiarisme</span>
+                </button>
+
+                <button id="reset-btn" class="btn-reset inline-flex items-center">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5 mr-2"></i>
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="results-container" class="hidden space-y-8 fade-in">
+            <!-- Summary Card -->
+            <div id="summary-card" class="bg-white/80 glass-effect rounded-3xl shadow-sm p-8 border border-white/60 hidden">
+                <div class="flex flex-col lg:flex-row items-start justify-between gap-8">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-4">
+                            <i data-lucide="bar-chart-3" class="w-6 h-6 text-slate-600"></i>
+                            <h2 class="text-2xl font-bold text-slate-800">Hasil Deteksi Plagiarisme</h2>
+                        </div>
+                        
+                        <!-- Legend -->
+                        <div class="legend mb-6">
+                            <div class="legend-item">
+                                <div class="legend-color legend-red"></div>
+                                <span>Merah: Lexical Match (≥ 85%)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color legend-yellow"></div>
+                                <span>Kuning: Structure Match (≥ 60%)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color legend-blue"></div>
+                                <span>Biru: Semantic Match (≥ 60%)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-white/80 rounded-xl p-4 border border-white/60">
+                                <p class="text-sm text-slate-500 font-medium">Dokumen yang Mirip</p>
+                                <p id="total-docs" class="text-2xl font-bold text-slate-800">0</p>
+                            </div>
+                            <div class="bg-white/80 rounded-xl p-4 border border-white/60">
+                                <p class="text-sm text-slate-500 font-medium">Similarity Tertinggi</p>
+                                <p id="max-similarity" class="text-2xl font-bold text-slate-800">0%</p>
+                            </div>
+                            <div class="bg-white/80 rounded-xl p-4 border border-white/60">
+                                <p class="text-sm text-slate-500 font-medium">Similarity Rata-rata</p>
+                                <p id="avg-similarity" class="text-2xl font-bold text-slate-800">0%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center lg:text-right">
+                        <div id="plagiarism-percent" class="text-6xl font-bold mb-2">0%</div>
+                        <p class="text-sm text-slate-600 font-medium">Similarity Maksimum</p>
+                        <div class="w-48 h-3 bg-slate-200 rounded-full mt-4 overflow-hidden">
+                            <div id="progress-bar" class="h-full rounded-full transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Results -->
+            <div id="detailed-results" class="bg-white/80 glass-effect rounded-3xl shadow-sm p-8 border border-white/60 hidden">
+                <h3 class="text-xl font-bold text-slate-800 mb-6 flex items-center">
+                    <i data-lucide="alert-circle" class="w-6 h-6 text-amber-500 mr-3"></i>
+                    Detail Kemiripan yang Terdeteksi
+                </h3>
+                
+                <div id="results-list" class="space-y-6">
+                    <!-- populated by JS -->
+                </div>
+                
+                <!-- Empty state when no matches -->
+                <div id="empty-state" class="empty-state hidden">
+                    <div class="empty-state-icon">
+                        <i data-lucide="check-circle" class="w-10 h-10 text-emerald-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-700 mb-2">Tidak Ada Plagiarisme Terdeteksi</h3>
+                    <p class="text-slate-500 mb-4">Tidak ditemukan kata/kalimat yang mirip dengan dokumen dalam database.</p>
+                    <p class="text-sm text-slate-400">Teks Anda terlihat orisinal!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-12 text-center text-sm text-slate-500">
+            <div class="footer-info inline-flex items-center gap-6 bg-white/80 glass-effect rounded-2xl px-6 py-4 shadow-sm border border-white/60">
+                <span>Bobot: Lexical 60%, Structural 25%, Semantic 15%</span>
+                <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                <span>Model: paraphrase-multilingual-MiniLM-L12-v2</span>
+                <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                <span>© 2024 UIN Sunan Gunung Djati Bandung</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // DOM Elements
+        const uploadTab = document.getElementById('upload-tab');
+        const textTab = document.getElementById('text-tab');
+        const uploadContent = document.getElementById('upload-content');
+        const textContent = document.getElementById('text-content');
+        const fileUpload = document.getElementById('file-upload');
+        const uploadDefault = document.getElementById('upload-default');
+        const uploadValid = document.getElementById('upload-valid');
+        const uploadedFileName = document.getElementById('uploaded-file-name');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const textInput = document.getElementById('text-input');
+        const charCount = document.getElementById('char-count');
+        const checkBtn = document.getElementById('check-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const resultsContainer = document.getElementById('results-container');
+        const summaryCard = document.getElementById('summary-card');
+        const plagiarismPercent = document.getElementById('plagiarism-percent');
+        const progressBar = document.getElementById('progress-bar');
+        const totalDocs = document.getElementById('total-docs');
+        const maxSimilarity = document.getElementById('max-similarity');
+        const avgSimilarity = document.getElementById('avg-similarity');
+        const detailedResults = document.getElementById('detailed-results');
+        const resultsList = document.getElementById('results-list');
+        const emptyState = document.getElementById('empty-state');
+
+        // State variables
+        let activeTab = 'upload';
+        let file = null;
+        let isChecking = false;
+        let currentInputText = '';
+
+        // Event Listeners
+        uploadTab.addEventListener('click', () => switchTab('upload'));
+        textTab.addEventListener('click', () => switchTab('text'));
+        fileUpload.addEventListener('change', handleFileChange);
+        textInput.addEventListener('input', updateCharCount);
+        checkBtn.addEventListener('click', handleCheckPlagiarism);
+        resetBtn.addEventListener('click', handleReset);
+
+        // Tab switching
+        function switchTab(tab) {
+            activeTab = tab;
+            if (tab === 'upload') {
+                uploadTab.classList.add('active-tab');
+                uploadTab.classList.remove('inactive-tab');
+                textTab.classList.add('inactive-tab');
+                textTab.classList.remove('active-tab');
+                uploadContent.classList.remove('hidden');
+                textContent.classList.add('hidden');
+            } else {
+                textTab.classList.add('active-tab');
+                textTab.classList.remove('inactive-tab');
+                uploadTab.classList.add('inactive-tab');
+                uploadTab.classList.remove('active-tab');
+                textContent.classList.remove('hidden');
+                uploadContent.classList.add('hidden');
+            }
+            updateCheckButtonState();
+        }
+
+        // File upload handler
+        function handleFileChange(e) {
+            const selectedFile = e.target.files[0];
+            if (!selectedFile) {
+                file = null;
+                uploadDefault.classList.remove('hidden');
+                uploadValid.classList.add('hidden');
+                fileInfo.classList.add('hidden');
+                updateCheckButtonState();
+                return;
+            }
+            
+            // Validate file type
+            const validTypes = ['.pdf', '.docx', '.txt'];
+            const fileExt = '.' + selectedFile.name.split('.').pop().toLowerCase();
+            
+            if (!validTypes.includes(fileExt)) {
+                alert('Format file tidak didukung. Gunakan PDF, DOCX, atau TXT.');
+                fileUpload.value = '';
+                return;
+            }
+            
+            file = selectedFile;
+            uploadDefault.classList.add('hidden');
+            uploadValid.classList.remove('hidden');
+            uploadedFileName.textContent = selectedFile.name;
+            fileName.textContent = selectedFile.name;
+            fileInfo.classList.remove('hidden');
+            
+            // Reset results area
+            resultsContainer.classList.add('hidden');
+            summaryCard.classList.add('hidden');
+            detailedResults.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            
+            updateCheckButtonState();
+        }
+
+        // Character count update
+        function updateCharCount() {
+            charCount.textContent = textInput.value.length;
+            updateCheckButtonState();
+        }
+
+        // Update check button state
+        function updateCheckButtonState() {
+            const disabled =
+                (activeTab === 'upload' && !file) ||
+                (activeTab === 'text' && (!textInput || !textInput.value.trim()));
+            
+            if (disabled) {
+                checkBtn.classList.add('disabled-btn');
+                checkBtn.disabled = true;
+            } else {
+                checkBtn.classList.remove('disabled-btn');
+                checkBtn.disabled = false;
+            }
+        }
+
+        // Function to highlight matching text (SAMA DENGAN NOTEBOOK)
+        function highlightText(inputText, result) {
+            if (!inputText || !result) return { text: inputText, hasHighlight: false };
+            
+            const abstract = result.abstract || '';
+            // Ambil 20 kata pertama untuk matching
+            const tokens = abstract.split(/\s+/).slice(0, 20);
+            
+            if (tokens.length === 0) return { text: inputText, hasHighlight: false };
+            
+            // Escape special characters untuk regex
+            const escapedTokens = tokens.map(token => 
+                token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            ).filter(token => token.length > 2); // Hanya kata dengan panjang > 2 huruf
+            
+            if (escapedTokens.length === 0) return { text: inputText, hasHighlight: false };
+            
+            // Buat regex pattern untuk mencari kata-kata yang sama
+            const pattern = new RegExp(`\\b(${escapedTokens.join('|')})\\b`, 'gi');
+            
+            let hasHighlight = false;
+            
+            // Ganti matching words dengan highlight
+            const highlightedText = inputText.replace(pattern, (match) => {
+                hasHighlight = true;
+                // Tentukan warna berdasarkan skor (SAMA DENGAN NOTEBOOK)
+                if (result.lexical >= 0.85) {
+                    return `<span class="highlight-red">${match}</span>`;
+                } else if (result.structure >= 0.60) {
+                    return `<span class="highlight-yellow">${match}</span>`;
+                } else if (result.semantic >= 0.60) {
+                    return `<span class="highlight-blue">${match}</span>`;
+                }
+                return match;
+            });
+            
+            return { 
+                text: highlightedText, 
+                hasHighlight: hasHighlight 
+            };
+        }
+
+        // Function to get score badge class
+        function getScoreBadgeClass(similarity) {
+            if (similarity >= 85) return 'score-badge-red';
+            if (similarity >= 70) return 'score-badge-red';
+            if (similarity >= 50) return 'score-badge-yellow';
+            if (similarity >= 30) return 'score-badge-blue';
+            if (similarity > 0) return 'score-badge-green';
+            return 'score-badge-gray';
+        }
+
+        // Main plagiarism check handler
+        async function handleCheckPlagiarism() {
+            if (isChecking) return;
+            if (checkBtn.disabled) return;
+
+            isChecking = true;
+            checkBtn.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div><span>Memeriksa...</span>`;
+            checkBtn.disabled = true;
+
+            // Store current input text
+            if (activeTab === "text") {
+                currentInputText = textInput.value;
+            } else {
+                currentInputText = ""; // For file upload, we don't have the text
+            }
+
+            const formData = new FormData();
+            
+            if (activeTab === "upload" && file) {
+                formData.append("file", file);
+            } else if (activeTab === "text") {
+                formData.append("query", textInput.value);
+            }
+
+            try {
+                const resp = await fetch("/predict", { 
+                    method: "POST", 
+                    body: formData 
+                });
+
+                if (!resp.ok) {
+                    const errorText = await resp.text();
+                    
+                    let errorMessage = `Error ${resp.status}`;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        if (errorJson.error) errorMessage = errorJson.error;
+                    } catch {
+                        errorMessage = errorText.substring(0, 200);
+                    }
+                    
+                    alert(`Server error: ${errorMessage}`);
+                    return;
+                }
+
+                const contentType = resp.headers.get("content-type") || "";
+                
+                if (contentType.includes("application/json")) {
+                    const data = await resp.json();
+                    
+                    // Check if it's an error response
+                    if (data.error) {
+                        alert(`Error: ${data.error}`);
+                        return;
+                    }
+                    
+                    displayResults(data);
+                } else {
+                    const text = await resp.text();
+                    console.error("Expected JSON but got:", text);
+                    alert("Server tidak mengembalikan data JSON. Periksa console untuk detail.");
+                }
+            } catch (err) {
+                console.error("Network error:", err);
+                alert("Gagal terhubung ke server: " + err.message);
+            } finally {
+                checkBtn.innerHTML = `<i data-lucide="search" class="w-5 h-5"></i><span>Cek Plagiarisme</span>`;
+                checkBtn.disabled = false;
+                isChecking = false;
+                lucide.createIcons();
+            }
+        }
+
+        // Display results function - HANYA TAMPILKAN YANG ADA HIGHLIGHT
+        function displayResults(results) {
+            // Show results container
+            resultsContainer.classList.remove('hidden');
+            
+            // Hide all result sections first
+            summaryCard.classList.add('hidden');
+            detailedResults.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            
+            // If no results or empty array
+            if (!results || results.length === 0) {
+                summaryCard.classList.remove('hidden');
+                detailedResults.classList.remove('hidden');
+                emptyState.classList.remove('hidden');
+                
+                // Set summary to 0%
+                totalDocs.textContent = "0";
+                maxSimilarity.textContent = "0%";
+                avgSimilarity.textContent = "0%";
+                plagiarismPercent.textContent = "0%";
+                progressBar.style.width = "0%";
+                progressBar.style.backgroundColor = "#10b981";
+                return;
+            }
+            
+            // If results is an array (modern format)
+            if (Array.isArray(results)) {
+                // Filter results: Hanya yang memiliki highlight
+                const filteredResults = [];
+                
+                results.forEach(item => {
+                    if (currentInputText && currentInputText.trim() !== '') {
+                        const highlightResult = highlightText(currentInputText, item);
+                        if (highlightResult.hasHighlight) {
+                            filteredResults.push({
+                                ...item,
+                                highlightText: highlightResult.text
+                            });
+                        }
+                    }
+                });
+                
+                // Jika tidak ada yang memiliki highlight
+                if (filteredResults.length === 0) {
+                    summaryCard.classList.remove('hidden');
+                    detailedResults.classList.remove('hidden');
+                    emptyState.classList.remove('hidden');
+                    
+                    // Set summary to 0%
+                    totalDocs.textContent = "0";
+                    maxSimilarity.textContent = "0%";
+                    avgSimilarity.textContent = "0%";
+                    plagiarismPercent.textContent = "0%";
+                    progressBar.style.width = "0%";
+                    progressBar.style.backgroundColor = "#10b981";
+                    return;
+                }
+                
+                // Calculate statistics from FILTERED results
+                let totalSimilarity = 0;
+                let maxSim = 0;
+                
+                filteredResults.forEach(item => {
+                    const sim = item.similarity || item.final_score * 100 || 0;
+                    totalSimilarity += sim;
+                    if (sim > maxSim) maxSim = sim;
+                });
+                
+                const avgSim = filteredResults.length > 0 ? totalSimilarity / filteredResults.length : 0;
+                
+                // Update summary card with FILTERED results
+                summaryCard.classList.remove('hidden');
+                totalDocs.textContent = filteredResults.length;
+                maxSimilarity.textContent = maxSim.toFixed(2) + '%';
+                avgSimilarity.textContent = avgSim.toFixed(2) + '%';
+                plagiarismPercent.textContent = maxSim.toFixed(2) + '%';
+                progressBar.style.width = Math.min(maxSim, 100) + '%';
+                
+                // Color code progress bar based on max similarity
+                if (maxSim >= 70) {
+                    progressBar.style.backgroundColor = '#ef4444'; // red
+                } else if (maxSim >= 50) {
+                    progressBar.style.backgroundColor = '#f59e0b'; // amber
+                } else if (maxSim >= 30) {
+                    progressBar.style.backgroundColor = '#3b82f6'; // blue
+                } else if (maxSim > 0) {
+                    progressBar.style.backgroundColor = '#10b981'; // emerald
+                } else {
+                    progressBar.style.backgroundColor = '#9ca3af'; // gray
+                }
+                
+                // Clear and populate detailed results with FILTERED results
+                resultsList.innerHTML = '';
+                detailedResults.classList.remove('hidden');
+                
+                filteredResults.forEach((result, index) => {
+                    const item = createResultCard(index + 1, result, currentInputText);
+                    resultsList.appendChild(item);
+                });
+                
+                return;
+            }
+            
+            // Legacy format (object with percent_plagiarism)
+            if (results.percent_plagiarism !== undefined) {
+                // For legacy format, show only rows with highlight
+                const rows = results.report_rows || [];
+                const filteredRows = [];
+                
+                rows.forEach(row => {
+                    if (currentInputText && currentInputText.trim() !== '') {
+                        const highlightResult = highlightText(currentInputText, row);
+                        if (highlightResult.hasHighlight) {
+                            filteredRows.push({
+                                ...row,
+                                highlightText: highlightResult.text
+                            });
+                        }
+                    }
+                });
+                
+                if (filteredRows.length === 0) {
+                    summaryCard.classList.remove('hidden');
+                    detailedResults.classList.remove('hidden');
+                    emptyState.classList.remove('hidden');
+                    
+                    plagiarismPercent.textContent = "0%";
+                    progressBar.style.width = "0%";
+                    totalDocs.textContent = "0";
+                    return;
+                }
+                
+                summaryCard.classList.remove('hidden');
+                detailedResults.classList.remove('hidden');
+                
+                plagiarismPercent.textContent = results.percent_plagiarism.toFixed(2) + '%';
+                progressBar.style.width = Math.min(results.percent_plagiarism, 100) + '%';
+                totalDocs.textContent = filteredRows.length;
+                
+                resultsList.innerHTML = '';
+                
+                filteredRows.forEach((row, idx) => {
+                    const item = createResultCard(idx + 1, row, currentInputText);
+                    resultsList.appendChild(item);
+                });
+                return;
+            }
+            
+            // Fallback - no results
+            emptyState.classList.remove('hidden');
+        }
+
+        // Create result card with highlighted text
+        function createResultCard(index, result, inputText) {
+            const item = document.createElement('div');
+            item.className = 'bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300';
+            
+            const similarity = result.similarity || result.final_score * 100 || 0;
+            const scorePercent = similarity.toFixed(2) + '%';
+            const scoreBadgeClass = getScoreBadgeClass(similarity);
+            
+            // Get component scores
+            const semantic = result.semantic ? (result.semantic * 100).toFixed(2) + '%' : '0%';
+            const lexical = result.lexical ? (result.lexical * 100).toFixed(2) + '%' : '0%';
+            const structure = result.structure ? (result.structure * 100).toFixed(2) + '%' : '0%';
+            
+            // Use pre-calculated highlight text if available
+            let highlightedTextSection = '';
+            if (result.highlightText && result.highlightText !== inputText) {
+                highlightedTextSection = `
+                    <div class="mt-4">
+                        <div class="matching-text-title">
+                            <i data-lucide="highlighter" class="w-4 h-4"></i>
+                            Teks Input yang Mirip (Highlighted):
+                        </div>
+                        <div class="matching-text">
+                            ${result.highlightText}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            item.innerHTML = `
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span class="text-sm font-medium text-slate-500">Hasil #${index}</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">${escapeHtml(result.title || `Dokumen ${result.index}`)}</h3>
+                    </div>
+                    <div class="ml-4 px-3 py-1.5 ${scoreBadgeClass} rounded-full text-sm font-semibold">
+                        ${scorePercent} Similarity
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="bg-slate-50 rounded-lg p-3">
+                        <p class="text-xs text-slate-500 font-medium">Semantic</p>
+                        <p class="text-lg font-bold text-slate-800">${semantic}</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-lg p-3">
+                        <p class="text-xs text-slate-500 font-medium">Lexical</p>
+                        <p class="text-lg font-bold text-slate-800">${lexical}</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-lg p-3">
+                        <p class="text-xs text-slate-500 font-medium">Structure</p>
+                        <p class="text-lg font-bold text-slate-800">${structure}</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-700 mb-1">URL Referensi:</p>
+                        <a href="${result.url || result.pdf || '#'}" target="_blank" rel="noopener noreferrer" 
+                           class="text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 text-sm break-all">
+                            ${escapeHtml(result.url || result.pdf || '#')}
+                            <i data-lucide="external-link" class="w-4 h-4 flex-shrink-0"></i>
+                        </a>
+                    </div>
+                    
+                    <div>
+                        <p class="text-sm font-semibold text-slate-700 mb-1">Abstrak Sumber:</p>
+                        <div class="text-slate-600 text-sm leading-relaxed bg-slate-50 p-3 rounded-lg max-h-40 overflow-y-auto">
+                            ${escapeHtml(result.abstract || 'Tidak tersedia')}
+                        </div>
+                    </div>
+                    
+                    ${highlightedTextSection}
+                </div>
+            `;
+            
+            lucide.createIcons();
+            return item;
+        }
+
+        // HTML escape function
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return String(unsafe)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        // Reset function
+        function handleReset() {
+            // Reset file upload
+            file = null;
+            fileUpload.value = "";
+            uploadDefault.classList.remove('hidden');
+            uploadValid.classList.add('hidden');
+            fileInfo.classList.add('hidden');
+            uploadedFileName.textContent = "";
+            fileName.textContent = "";
+            
+            // Reset text input
+            textInput.value = "";
+            charCount.textContent = "0";
+            currentInputText = "";
+            
+            // Hide results
+            resultsContainer.classList.add('hidden');
+            summaryCard.classList.add('hidden');
+            detailedResults.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            
+            // Update button state
+            updateCheckButtonState();
+        }
+
+        // Initialize
+        updateCheckButtonState();
+    </script>
+</body>
+</html>

@@ -1,0 +1,309 @@
+/* Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Fade Animation */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Glass Effect */
+.glass-effect {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0.25rem;
+    background: rgba(241, 245, 249, 0.8);
+    padding: 0.4rem;
+    border-radius: 1rem;
+}
+
+.active-tab,
+.inactive-tab {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.8rem;
+    font-weight: 600;
+    border-radius: 0.8rem;
+    transition: 0.3s;
+    cursor: pointer;
+    background: white; /* background selalu putih */
+}
+
+/* TAB AKTIF — teks biru */
+.active-tab {
+    color: #2563eb;
+    border: 1px solid #2563eb33; /* sedikit border biru lembut */
+}
+
+/* TAB NONAKTIF — teks abu */
+.inactive-tab {
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+/* HOVER — background tetap putih, teks jadi biru */
+.inactive-tab:hover {
+    color: #2563eb;
+}
+
+
+/* Upload area */
+.upload-area {
+    border: 2px dashed #cbd5e1;
+    padding: 3rem;
+    border-radius: 1.25rem;
+    text-align: center;
+    transition: 0.3s;
+}
+
+.upload-area:hover {
+    border-color: #60a5fa;
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.upload-icon {
+    padding: 1rem;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: rgba(191, 219, 254, 0.5);
+    border-radius: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.upload-btn {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(to right, #2563eb, #4f46e5);
+    color: white;
+    padding: 0.85rem 2.5rem;
+    border-radius: 0.8rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.upload-btn:hover {
+    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+}
+
+/* Uploaded file validation area */
+.upload-valid {
+    text-align: center;
+    padding: 1rem;
+    animation: fadeIn 0.4s ease;
+}
+
+.change-file-btn {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    border: 1px solid #dbeafe;
+    color: #2563eb;
+    padding: 0.6rem 1.3rem;
+    border-radius: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.change-file-btn:hover {
+    background: #e2e8f0;
+}
+
+/* File info */
+.file-info {
+    margin-top: 1rem;
+    display: inline-flex;
+    padding: 0.7rem 1rem;
+    background: white;
+    border-radius: 0.6rem;
+    border: 1px solid #d1fae5;
+    align-items: center;
+}
+#file-info {
+    display: none;
+    opacity: 0;
+    pointer-events: none;   /* tidak bisa di-hover */
+}
+#file-info.show {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;   /* sekarang bisa di-hover */
+}
+
+
+/* Text input */
+.text-input {
+    width: 100%;
+    height: 280px;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    background: rgba(255,255,255,0.5);
+    border-radius: 1rem;
+    resize: none;
+    outline: none;
+    transition: 0.3s;
+}
+
+.text-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+}
+
+/* 🔥 CHECK BUTTON — FULL WIDTH ke KANAN (seperti gambar 1) */
+.btn-check {
+    width: 100%;
+    background: linear-gradient(to right, #2563eb, #4f46e5);
+    color: white;
+    padding: 16px 32px;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 18px;
+    display: flex;
+    justify-content: center;  
+    align-items: center;
+    gap: 10px;
+    transition: 0.3s;
+}
+
+.btn-check:hover {
+    box-shadow: 0 5px 18px rgba(59, 130, 246, 0.35);
+}
+
+/* Reset button */
+.btn-reset {
+    padding: 14px 26px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #475569;
+    transition: 0.3s;
+}
+
+.btn-reset:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+/* Disabled state */
+.disabled-btn {
+    background: linear-gradient(to right, #c7d2fe, #e0e7ff) !important;
+    color: #f1f5f9 !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+
+.disabled-btn i {
+    color: #e2e8f0 !important;
+}
+
+/* Result section */
+.result-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 1.5rem;
+    border: 2px solid #f1f5f9;
+    margin-top: 1rem;
+}
+
+.result-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+}
+
+.result-box {
+    padding: 1rem;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid #f1f5f9;
+    border-radius: 0.8rem;
+}
+
+.label {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.percent {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 0.2rem;
+}
+
+.progress {
+    width: 100%;
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 9999px;
+    margin-top: 0.8rem;
+    overflow: hidden;
+}
+
+.bar {
+    height: 100%;
+    background: #2563eb;
+    width: 0%;
+    transition: width 1s;
+}
+
+/* Footer */
+.footer-info {
+    background: rgba(255,255,255,0.8);
+    padding: 0.7rem 1.5rem;
+    border-radius: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid #f1f5f9;
+}
+
+.dot {
+    width: 4px;
+    height: 4px;
+    background: #cbd5e1;
+    border-radius: 9999px;
+}
+
+/* JOIN BUTTON (seperti gambar 2, bukan hanya link) */
+.join-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.55rem 1.1rem;
+    border-radius: 0.55rem;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    font-weight: 600;
+    transition: 0.25s;
+}
+
+.join-btn:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
