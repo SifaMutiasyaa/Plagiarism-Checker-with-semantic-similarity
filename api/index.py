@@ -12,20 +12,26 @@ import PyPDF2
 from docx import Document
 import io
 import traceback
-import sys
-import json
 
 # ---------------------------
-# Fix path untuk model di Vercel
+# Setup paths untuk Vercel
 # ---------------------------
 current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-models_dir = os.path.join(parent_dir, 'models')
+root_dir = os.path.dirname(current_dir)  # Satu level di atas api/
+models_dir = os.path.join(root_dir, 'models')
+templates_dir = os.path.join(root_dir, 'templates')
+static_dir = os.path.join(root_dir, 'static')
+
+# Print untuk debug
+print(f"Current dir: {current_dir}")
+print(f"Root dir: {root_dir}")
+print(f"Models dir: {models_dir}")
+print(f"Templates dir: {templates_dir}")
+print(f"Static dir: {static_dir}")
 
 app = Flask(__name__, 
-            static_folder=os.path.join(parent_dir, 'static'), 
-            template_folder=os.path.join(parent_dir, 'templates'),
-            static_url_path="/static")
+            static_folder=static_dir, 
+            template_folder=templates_dir)
 
 # ---------------------------
 # Configuration
@@ -60,7 +66,7 @@ def extract_text_from_pdf(file_stream):
                 text += page_text + "\n"
         return text.strip()
     except Exception as e:
-        raise ValueError(f"Failed to read PDF: {str(e)}")
+        raise ValueError(f"Gagal membaca PDF: {str(e)}")
 
 def extract_text_from_docx(file_stream):
     try:
@@ -68,14 +74,14 @@ def extract_text_from_docx(file_stream):
         text = "\n".join([paragraph.text for paragraph in doc.paragraphs if paragraph.text.strip()])
         return text.strip()
     except Exception as e:
-        raise ValueError(f"Failed to read DOCX: {str(e)}")
+        raise ValueError(f"Gagal membaca DOCX: {str(e)}")
 
 def extract_text_from_file(file):
     filename = file.filename.lower()
     file_content = file.read()
     
     if not file_content:
-        raise ValueError("Empty file")
+        raise ValueError("File kosong")
     
     file_stream = io.BytesIO(file_content)
     
@@ -87,7 +93,7 @@ def extract_text_from_file(file):
         file_stream.seek(0)
         return file_stream.read().decode('utf-8', errors='ignore').strip()
     else:
-        raise ValueError("Unsupported format. Use PDF, DOCX, or TXT.")
+        raise ValueError("Format file tidak didukung. Gunakan PDF, DOCX, atau TXT.")
 
 # ---------------------------
 # Global variables untuk models
@@ -129,11 +135,12 @@ def load_models():
             print("Loading SentenceTransformer model...")
             model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
             
-        print("All models loaded successfully!")
+        print("Semua model berhasil dimuat!")
+        return True
     except Exception as e:
         print(f"Error loading models: {str(e)}")
         traceback.print_exc()
-        raise
+        return False
 
 # ---------------------------
 # Search functions
@@ -151,7 +158,9 @@ def compute_semantic_score(query, candidate_indices):
     return sims
 
 def check_plagiarism(query, top_k=5):
-    load_models()
+    # Load models jika belum
+    if not load_models():
+        raise Exception("Gagal memuat model")
     
     idx_top, lexical_scores = tfidf_search(query, top_n=TOP_K_TFIDF)
     semantic_scores = compute_semantic_score(query, idx_top)
@@ -196,11 +205,12 @@ def home():
 @app.route("/health")
 def health():
     try:
-        load_models()
+        success = load_models()
         return jsonify({
-            "status": "healthy",
-            "message": "Server is running",
-            "models_loaded": True
+            "status": "healthy" if success else "error",
+            "message": "Server is running" if success else "Failed to load models",
+            "models_loaded": success,
+            "python_version": os.sys.version
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -209,11 +219,11 @@ def health():
 def predict():
     if request.method == "GET":
         return jsonify({
-            "message": "Send POST request with 'query' parameter or upload file",
+            "message": "Kirim POST request dengan parameter 'query' atau upload file",
             "example": {
                 "POST": "/predict",
                 "body": {"query": "text to check"},
-                "or": "upload file with key 'file'"
+                "atau": "upload file dengan key 'file'"
             }
         })
     
@@ -223,8 +233,8 @@ def predict():
         if 'file' in request.files:
             file = request.files['file']
             if file.filename != '':
-                if file.content_length and file.content_length > 10 * 1024 * 1024:
-                    return jsonify({"error": "File too large (max 10MB)"}), 400
+                if hasattr(file, 'content_length') and file.content_length and file.content_length > 10 * 1024 * 1024:
+                    return jsonify({"error": "File terlalu besar (maks 10MB)"}), 400
                 query = extract_text_from_file(file)
             else:
                 query = request.form.get("query", "").strip()
@@ -238,10 +248,10 @@ def predict():
                 query = request.form.get("query", request.form.get("text_input", "")).strip()
         
         if not query:
-            return jsonify({"error": "No text provided"}), 400
+            return jsonify({"error": "Tidak ada teks yang diberikan"}), 400
         
         if len(query) < 10:
-            return jsonify({"error": "Text too short (min 10 characters)"}), 400
+            return jsonify({"error": "Teks terlalu pendek (minimal 10 karakter)"}), 400
         
         results = check_plagiarism(query, top_k=10)
         
@@ -268,22 +278,25 @@ def predict():
         return jsonify(response_data)
         
     except Exception as e:
-        print(f"Error in /predict: {str(e)}")
+        print(f"Error di /predict: {str(e)}")
         traceback.print_exc()
-        return jsonify({"error": f"Internal error: {str(e)}"}), 500
+        return jsonify({"error": f"Terjadi kesalahan: {str(e)}"}), 500
 
 @app.route('/static/<path:path>')
 def serve_static(path):
-    return send_from_directory(app.static_folder, path)
+    return send_from_directory(static_dir, path)
 
 # Error handlers
 @app.errorhandler(404)
 def not_found(e):
-    return jsonify({"error": "Endpoint not found", "available_endpoints": ["/", "/health", "/predict"]}), 404
+    return jsonify({
+        "error": "Endpoint tidak ditemukan", 
+        "available_endpoints": ["/", "/health", "/predict"]
+    }), 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    return jsonify({"error": "Internal server error"}), 500
+    return jsonify({"error": "Terjadi kesalahan internal server"}), 500
 
-# Vercel membutuhkan variabel 'app'
+# Wajib ada untuk Vercel
 app = app
