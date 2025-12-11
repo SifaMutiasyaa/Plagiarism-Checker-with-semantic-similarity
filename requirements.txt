@@ -1,24 +1,26 @@
+# --- Core Flask ---
 Flask
 Werkzeug
-numpy
-scikit-learn
-nltk
-pandas
-scipy
+gunicorn
+python-dotenv
+
+# --- ML Utils ---
+numpy==1.26.4
+scipy==1.10.1
+pandas==2.0.3
+scikit-learn==1.3.2
+joblib
 PyPDF2
 python-docx
-joblib
-python-dotenv
-gunicorn
+nltk
 
-# PyTorch CPU ONLY – sangat kecil (300–400 MB)
-torch==2.2.0+cpu
-torchvision==0.17.0+cpu
-torchaudio==2.2.0+cpu
+# --- PyTorch CPU only (kecil & kompatibel) ---
+torch==2.1.0+cpu
+torchvision==0.16.0+cpu
+torchaudio==2.1.0+cpu
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Sentence Transformers (pakai PyTorch CPU, aman)
+# --- Transformers stack versi kompatibel ---
+transformers==4.35.2
 sentence-transformers==2.2.2
-
-# Transformers versi ringan
-transformers==4.36.2
+huggingface-hub==0.19.4
