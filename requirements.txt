@@ -1,14 +1,11 @@
-Flask==3.0.3
-Werkzeug==3.0.3
-numpy==1.26.4
-scikit-learn==1.6.1  # PERBAIKI VERSI INI!
-pandas==2.2.2
-scipy==1.12.0
-sentence-transformers==2.6.1
+Flask==2.3.3  # Downgrade ke versi yang lebih ringan
+Werkzeug==2.3.7
+numpy==1.24.3  # Versi yang lebih kecil
+scikit-learn==1.3.0  # Versi konsisten
+pandas==2.0.3
+scipy==1.10.1
 PyPDF2==3.0.1
 python-docx==1.1.2
-joblib==1.3.2
-gunicorn==21.2.0
-python-dotenv==1.0.1
-transformers==4.40.2
-torch==2.3.0  # CPU version
+joblib==1.3.1
+gunicorn==20.1.0
+psutil==5.9.5  # Untuk monitor memory

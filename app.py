@@ -1,14 +1,17 @@
 import os
+import gc
+import psutil
 os.environ["TRANSFORMERS_NO_TF"] = "1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Kurangi log TensorFlow
-os.environ["TOKENIZERS_PARALLELISM"] = "false"  # Hindari deadlock tokenizer
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
 
 from flask import Flask, request, jsonify, render_template, send_from_directory
 import joblib
 import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
 import re
 import PyPDF2
 from docx import Document
@@ -16,9 +19,10 @@ import io
 import traceback
 import warnings
 warnings.filterwarnings('ignore')
+import time
 
 # ---------------------------
-# Struktur folder untuk Railway
+# Struktur folder
 # ---------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 models_dir = os.path.join(BASE_DIR, "models")
@@ -27,15 +31,16 @@ static_dir = os.path.join(BASE_DIR, "static")
 
 app = Flask(__name__, 
             static_folder=static_dir, 
-            template_folder=templates_dir)
+            template_folder=templates_dir,
+            static_url_path='')
 
 # ---------------------------
-# Configuration - OPTIMIZED FOR MEMORY
+# Configuration - EXTREME OPTIMIZATION
 # ---------------------------
-WEIGHT_LEXICAL = 0.6
-WEIGHT_STRUCTURE = 0.25
-WEIGHT_SEMANTIC = 0.15
-TOP_K_TFIDF = 15  # Kurangi dari 20 untuk hemat memori
+WEIGHT_LEXICAL = 0.8  # Tingkatkan weight TF-IDF
+WEIGHT_STRUCTURE = 0.2  # Kurangi Jaccard
+WEIGHT_SEMANTIC = 0.0  # NONAKTIFKAN SEMENTARA - ini yang paling berat!
+TOP_K_TFIDF = 10  # Kurangi lagi
 
 # ---------------------------
 # Helper functions
@@ -56,7 +61,7 @@ def extract_text_from_pdf(file_stream):
     try:
         pdf_reader = PyPDF2.PdfReader(file_stream)
         text = ""
-        for page in pdf_reader.pages:
+        for page in pdf_reader.pages[:10]:  # Batasi 10 halaman saja
             page_text = page.extract_text()
             if page_text:
                 text += page_text + "\n"
@@ -67,7 +72,7 @@ def extract_text_from_pdf(file_stream):
 def extract_text_from_docx(file_stream):
     try:
         doc = Document(file_stream)
-        text = "\n".join([paragraph.text for paragraph in doc.paragraphs if paragraph.text.strip()])
+        text = "\n".join([paragraph.text for paragraph in doc.paragraphs[:100] if paragraph.text.strip()])  # Batasi 100 paragraf
         return text.strip()
     except Exception as e:
         raise ValueError(f"Gagal membaca DOCX: {str(e)}")
@@ -87,143 +92,116 @@ def extract_text_from_file(file):
         return extract_text_from_docx(file_stream)
     elif filename.endswith('.txt'):
         file_stream.seek(0)
-        return file_stream.read().decode('utf-8', errors='ignore').strip()
+        return file_stream.read().decode('utf-8', errors='ignore').strip()[:10000]  # Batasi 10k karakter
     else:
         raise ValueError("Format file tidak didukung. Gunakan PDF, DOCX, atau TXT.")
 
 # ---------------------------
-# Global variables dengan lazy loading
+# Model Loading dengan SWAP Strategy
 # ---------------------------
-tfidf_vectorizer = None
-tfidf_matrix = None
-df = None
-corpus_texts = None
-corpus_embeddings = None
-model = None
+class ModelManager:
+    def __init__(self):
+        self.tfidf_vectorizer = None
+        self.tfidf_matrix = None
+        self.df = None
+        self.corpus_texts = None
+        self.loaded = False
+        
+    def load_minimal(self):
+        """Hanya load yang benar-benar diperlukan"""
+        try:
+            if not self.loaded:
+                print("🔄 Memulai loading model...")
+                
+                # 1. Load TF-IDF vectorizer
+                print("📦 Memuat TF-IDF vectorizer...")
+                self.tfidf_vectorizer = joblib.load(
+                    os.path.join(models_dir, "tfidf.pkl")
+                )
+                
+                # 2. Load TF-IDF matrix (dengan optimize)
+                print("📦 Memuat TF-IDF matrix...")
+                # Coba load dengan sparse format
+                self.tfidf_matrix = joblib.load(
+                    os.path.join(models_dir, "tfidf_matrix.pkl")
+                )
+                
+                # 3. Load corpus (hanya kolom yang diperlukan)
+                print("📦 Memuat CSV corpus...")
+                self.df = pd.read_csv(
+                    os.path.join(models_dir, "corpus_clean.csv"),
+                    usecols=['abstract', 'title', 'url', 'pdf'],  # Hanya kolom yang diperlukan
+                    nrows=5000  # Batasi jumlah data jika terlalu besar
+                )
+                self.df = self.df.fillna("")
+                self.corpus_texts = self.df["abstract"].astype(str).tolist()
+                
+                # 4. Force garbage collection
+                gc.collect()
+                
+                # 5. Check memory usage
+                process = psutil.Process(os.getpid())
+                mem_mb = process.memory_info().rss / 1024 / 1024
+                print(f"✅ Model loaded! Memory usage: {mem_mb:.2f} MB")
+                
+                self.loaded = True
+                return True
+                
+        except Exception as e:
+            print(f"❌ Error loading models: {str(e)}")
+            traceback.print_exc()
+            return False
+    
+    def unload(self):
+        """Unload models untuk hemat memory"""
+        self.tfidf_vectorizer = None
+        self.tfidf_matrix = None
+        self.df = None
+        self.corpus_texts = None
+        gc.collect()
+        self.loaded = False
+        print("🧹 Models unloaded from memory")
 
-# Cache untuk mengurangi beban memori
-_search_cache = {}
-_CACHE_SIZE = 10
-
-def load_tfidf_models():
-    """Load TF-IDF models saja"""
-    global tfidf_vectorizer, tfidf_matrix
-    try:
-        if tfidf_vectorizer is None:
-            print("Memuat TF-IDF vectorizer...")
-            tfidf_vectorizer = joblib.load(os.path.join(models_dir, "tfidf.pkl"))
-            
-        if tfidf_matrix is None:
-            print("Memuat TF-IDF matrix...")
-            # Gunakan memory mapping untuk matrix besar
-            tfidf_matrix = joblib.load(os.path.join(models_dir, "tfidf_matrix.pkl"))
-        return True
-    except Exception as e:
-        print("Error load TF-IDF:", str(e))
-        return False
-
-def load_corpus_data():
-    """Load corpus data saja"""
-    global df, corpus_texts
-    try:
-        if df is None:
-            print("Memuat CSV corpus...")
-            # Baca dengan chunk jika file besar
-            df = pd.read_csv(os.path.join(models_dir, "corpus_clean.csv"))
-            df = df.fillna("")
-            corpus_texts = df["abstract"].astype(str).tolist()
-        return True
-    except Exception as e:
-        print("Error load corpus:", str(e))
-        return False
-
-def load_embeddings():
-    """Load embeddings saja"""
-    global corpus_embeddings
-    try:
-        if corpus_embeddings is None:
-            print("Memuat corpus embeddings...")
-            # Gunakan mmap_mode untuk file numpy besar
-            corpus_embeddings = np.load(
-                os.path.join(models_dir, "corpus_embeddings.npy"),
-                mmap_mode='r'  # Read-only memory mapping
-            )
-        return True
-    except Exception as e:
-        print("Error load embeddings:", str(e))
-        return False
-
-def load_sentence_transformer():
-    """Load sentence transformer saja"""
-    global model
-    try:
-        if model is None:
-            print("Memuat SentenceTransformer...")
-            model = SentenceTransformer(
-                'paraphrase-multilingual-MiniLM-L12-v2',
-                device='cpu'  # Force CPU usage
-            )
-        return True
-    except Exception as e:
-        print("Error load SentenceTransformer:", str(e))
-        return False
-
-def cleanup_memory():
-    """Bersihkan cache untuk hemat memori"""
-    global _search_cache
-    if len(_search_cache) > _CACHE_SIZE:
-        # Hapus oldest entries
-        keys_to_remove = list(_search_cache.keys())[:_CACHE_SIZE // 2]
-        for key in keys_to_remove:
-            del _search_cache[key]
+model_manager = ModelManager()
 
 # ---------------------------
-# Search functions dengan optimasi memori
+# Search functions
 # ---------------------------
 def tfidf_search(query, top_n=TOP_K_TFIDF):
-    q_vec = tfidf_vectorizer.transform([query])
-    scores = cosine_similarity(q_vec, tfidf_matrix).flatten()
+    q_vec = model_manager.tfidf_vectorizer.transform([query])
+    scores = cosine_similarity(q_vec, model_manager.tfidf_matrix).flatten()
     idx_sorted = scores.argsort()[::-1][:top_n]
     return idx_sorted, scores[idx_sorted]
 
-def compute_semantic_score(query, candidate_indices):
-    q_emb = model.encode([query], show_progress_bar=False, convert_to_numpy=True)[0]
-    subset = corpus_embeddings[candidate_indices]
-    sims = cosine_similarity([q_emb], subset).flatten()
-    return sims
-
-def check_plagiarism(query, top_k=5):
-    # Cache untuk query yang sama
-    cache_key = hash(query[:100])  # Hash 100 karakter pertama
-    if cache_key in _search_cache:
-        return _search_cache[cache_key]
+def check_plagiarism(query, top_k=3):  # Kecilkan hasil
+    start_time = time.time()
     
     try:
-        # Lazy loading hanya model yang dibutuhkan
-        if not load_tfidf_models():
-            raise Exception("Gagal memuat model TF-IDF")
-        if not load_corpus_data():
-            raise Exception("Gagal memuat data corpus")
+        # Load models
+        if not model_manager.load_minimal():
+            raise Exception("Gagal memuat model")
         
+        # Batasi query length
+        query = query[:2000]  # Maksimal 2000 karakter
+        
+        # Cari dengan TF-IDF
         idx_top, lexical_scores = tfidf_search(query, top_n=TOP_K_TFIDF)
         
-        # Load embeddings hanya jika perlu
-        structural_scores = np.array([jaccard_similarity(query, corpus_texts[i]) for i in idx_top])
+        # Hitung Jaccard similarity
+        structural_scores = []
+        for i in idx_top:
+            score = jaccard_similarity(query, model_manager.corpus_texts[i])
+            structural_scores.append(score)
         
-        # Load sentence transformer dan embeddings hanya jika semantic weight > 0
-        semantic_scores = np.zeros(len(idx_top))
-        if WEIGHT_SEMANTIC > 0:
-            if not load_embeddings() or not load_sentence_transformer():
-                print("Peringatan: Model semantic tidak dimuat, menggunakan nilai default")
-            else:
-                semantic_scores = compute_semantic_score(query, idx_top)
+        structural_scores = np.array(structural_scores)
         
+        # Final scores (tanpa semantic)
         final_scores = (
             lexical_scores * WEIGHT_LEXICAL +
-            structural_scores * WEIGHT_STRUCTURE +
-            semantic_scores * WEIGHT_SEMANTIC
+            structural_scores * WEIGHT_STRUCTURE
         )
         
+        # Ambil top results
         top_indices = final_scores.argsort()[::-1][:top_k]
         
         results = []
@@ -231,20 +209,18 @@ def check_plagiarism(query, top_k=5):
             doc_idx = idx_top[idx]
             results.append({
                 "index": int(doc_idx),
-                "title": df.loc[doc_idx, "title"] if "title" in df.columns else f"Dokumen {doc_idx}",
-                "url": df.loc[doc_idx, "url"] if "url" in df.columns else "",
-                "pdf": df.loc[doc_idx, "pdf"] if "pdf" in df.columns else "",
-                "abstract": corpus_texts[doc_idx][:300] + "..." if len(corpus_texts[doc_idx]) > 300 else corpus_texts[doc_idx],
-                "semantic": float(semantic_scores[idx]),
+                "title": model_manager.df.loc[doc_idx, "title"] if "title" in model_manager.df.columns else f"Dokumen {doc_idx}",
+                "url": model_manager.df.loc[doc_idx, "url"] if "url" in model_manager.df.columns else "",
+                "pdf": model_manager.df.loc[doc_idx, "pdf"] if "pdf" in model_manager.df.columns else "",
+                "abstract": model_manager.corpus_texts[doc_idx][:200] + "..." if len(model_manager.corpus_texts[doc_idx]) > 200 else model_manager.corpus_texts[doc_idx],
                 "lexical": float(lexical_scores[idx]),
                 "structure": float(structural_scores[idx]),
-                "final_score": float(final_scores[idx]),
-                "similarity": min(float(final_scores[idx]) * 100, 100)  # Cap di 100%
+                "similarity": min(float(final_scores[idx]) * 100, 100),
+                "processing_time": round(time.time() - start_time, 2)
             })
         
-        # Simpan ke cache
-        _search_cache[cache_key] = results
-        cleanup_memory()
+        # Unload models setelah selesai (untuk request berikutnya)
+        # model_manager.unload()  # Hati-hati dengan ini
         
         return results
         
@@ -263,17 +239,18 @@ def home():
 @app.route("/health")
 def health():
     try:
-        # Cek apakah model minimal bisa dimuat
-        basic_loaded = load_tfidf_models() and load_corpus_data()
+        process = psutil.Process(os.getpid())
+        mem_mb = process.memory_info().rss / 1024 / 1024
+        
         return jsonify({
-            "status": "running", 
-            "models_loaded": basic_loaded,
-            "memory_info": {
-                "cache_size": len(_search_cache),
-                "tfidf_loaded": tfidf_vectorizer is not None,
-                "corpus_loaded": df is not None,
-                "embeddings_loaded": corpus_embeddings is not None,
-                "transformer_loaded": model is not None
+            "status": "running",
+            "memory_mb": round(mem_mb, 2),
+            "models_loaded": model_manager.loaded,
+            "config": {
+                "weight_tfidf": WEIGHT_LEXICAL,
+                "weight_jaccard": WEIGHT_STRUCTURE,
+                "weight_semantic": WEIGHT_SEMANTIC,
+                "top_k": TOP_K_TFIDF
             }
         })
     except Exception as e:
@@ -283,53 +260,44 @@ def health():
 def predict():
     try:
         query = ""
-
+        
+        # Ekstrak dari file
         if "file" in request.files:
             file = request.files["file"]
             if file.filename != "":
                 query = extract_text_from_file(file)
-
+        
+        # Atau dari text input
         if not query:
             query = request.form.get("query", "").strip()
-
+        
         if not query:
             return jsonify({"error": "Tidak ada teks yang diberikan"}), 400
         
-        # Batasi panjang query untuk hemat memori
-        if len(query) > 10000:
-            query = query[:10000]
-            print(f"Query dipotong menjadi {len(query)} karakter")
-
-        results = check_plagiarism(query, top_k=5)  # Kurangi dari 10 ke 5
-
+        # Batasi panjang query
+        if len(query) > 5000:
+            query = query[:5000]
+        
+        results = check_plagiarism(query, top_k=3)
+        
         return jsonify({
             "query_length": len(query),
             "results_found": len(results),
             "results": results
         })
-
+        
     except Exception as e:
-        print(f"Error di endpoint /predict: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
-@app.route("/clear_cache", methods=["POST"])
-def clear_cache():
-    """Endpoint untuk membersihkan cache secara manual"""
-    global _search_cache
-    _search_cache = {}
-    return jsonify({"status": "cache cleared", "cache_size": 0})
 
 @app.route("/static/<path:path>")
 def static_files(path):
     return send_from_directory(static_dir, path)
 
 # ---------------------------
-# GUNICORN CONFIG UNTUK RAILWAY
+# GUNICORN CONFIG untuk Railway
 # ---------------------------
-# Railway akan menggunakan gunicorn secara otomatis
-# Tapi kita bisa atur worker yang lebih sedikit
-
+# Railway akan execute ini
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    # Jangan gunakan debug di production
+    # Hanya untuk development
     app.run(host="0.0.0.0", port=port, debug=False)
