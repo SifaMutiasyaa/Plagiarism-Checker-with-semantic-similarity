@@ -5,11 +5,20 @@ scikit-learn
 nltk
 pandas
 scipy
-sentence-transformers
-transformers
-torch
 PyPDF2
 python-docx
 joblib
 python-dotenv
 gunicorn
+
+# PyTorch CPU ONLY – sangat kecil (300–400 MB)
+torch==2.2.0+cpu
+torchvision==0.17.0+cpu
+torchaudio==2.2.0+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# Sentence Transformers (pakai PyTorch CPU, aman)
+sentence-transformers==2.2.2
+
+# Transformers versi ringan
+transformers==4.36.2
