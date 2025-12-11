@@ -14,20 +14,12 @@ import io
 import traceback
 
 # ---------------------------
-# Setup paths untuk Vercel
+# Struktur folder untuk Railway
 # ---------------------------
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.dirname(current_dir)  # Satu level di atas api/
-models_dir = os.path.join(root_dir, 'models')
-templates_dir = os.path.join(root_dir, 'templates')
-static_dir = os.path.join(root_dir, 'static')
-
-# Print untuk debug
-print(f"Current dir: {current_dir}")
-print(f"Root dir: {root_dir}")
-print(f"Models dir: {models_dir}")
-print(f"Templates dir: {templates_dir}")
-print(f"Static dir: {static_dir}")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+models_dir = os.path.join(BASE_DIR, "models")
+templates_dir = os.path.join(BASE_DIR, "templates")
+static_dir = os.path.join(BASE_DIR, "static")
 
 app = Flask(__name__, 
             static_folder=static_dir, 
@@ -107,40 +99,36 @@ model = None
 
 def load_models():
     global tfidf_vectorizer, tfidf_matrix, df, corpus_texts, corpus_embeddings, model
-    
     try:
         if tfidf_vectorizer is None:
-            print("Loading TF-IDF vectorizer...")
+            print("Memuat TF-IDF vectorizer...")
             tfidf_vectorizer = joblib.load(os.path.join(models_dir, "tfidf.pkl"))
             
         if tfidf_matrix is None:
-            print("Loading TF-IDF matrix...")
+            print("Memuat TF-IDF matrix...")
             tfidf_matrix = joblib.load(os.path.join(models_dir, "tfidf_matrix.pkl"))
             
         if df is None:
-            print("Loading CSV data...")
+            print("Memuat CSV corpus...")
             df = pd.read_csv(os.path.join(models_dir, "corpus_clean.csv"))
             df = df.fillna("")
-            
-            if "abstract" not in df.columns:
-                raise ValueError("CSV tidak memiliki kolom 'abstract'.")
-            
             corpus_texts = df["abstract"].astype(str).tolist()
             
         if corpus_embeddings is None:
-            print("Loading embeddings...")
+            print("Memuat corpus embeddings...")
             corpus_embeddings = np.load(os.path.join(models_dir, "corpus_embeddings.npy"))
             
         if model is None:
-            print("Loading SentenceTransformer model...")
+            print("Memuat SentenceTransformer...")
             model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-            
-        print("Semua model berhasil dimuat!")
+        
+        print("Model semua berhasil dimuat!")
         return True
     except Exception as e:
-        print(f"Error loading models: {str(e)}")
+        print("Error load model:", str(e))
         traceback.print_exc()
         return False
+
 
 # ---------------------------
 # Search functions
@@ -158,7 +146,6 @@ def compute_semantic_score(query, candidate_indices):
     return sims
 
 def check_plagiarism(query, top_k=5):
-    # Load models jika belum
     if not load_models():
         raise Exception("Gagal memuat model")
     
@@ -175,13 +162,13 @@ def check_plagiarism(query, top_k=5):
     top_indices = final_scores.argsort()[::-1][:top_k]
     
     results = []
-    for i, idx in enumerate(top_indices):
+    for idx in top_indices:
         doc_idx = idx_top[idx]
         results.append({
             "index": int(doc_idx),
-            "title": str(df.loc[doc_idx, "title"]) if "title" in df.columns else f"Dokumen {doc_idx}",
-            "url": str(df.loc[doc_idx, "url"]) if "url" in df.columns else "",
-            "pdf": str(df.loc[doc_idx, "pdf"]) if "pdf" in df.columns else "",
+            "title": df.loc[doc_idx, "title"] if "title" in df.columns else f"Dokumen {doc_idx}",
+            "url": df.loc[doc_idx, "url"] if "url" in df.columns else "",
+            "pdf": df.loc[doc_idx, "pdf"] if "pdf" in df.columns else "",
             "abstract": corpus_texts[doc_idx][:500] + "..." if len(corpus_texts[doc_idx]) > 500 else corpus_texts[doc_idx],
             "semantic": float(semantic_scores[idx]),
             "lexical": float(lexical_scores[idx]),
@@ -192,111 +179,53 @@ def check_plagiarism(query, top_k=5):
     
     return results
 
+
 # ---------------------------
-# API endpoints
+# Endpoints
 # ---------------------------
 @app.route("/")
 def home():
-    try:
-        return render_template("index.html")
-    except Exception as e:
-        return f"Error loading template: {str(e)}", 500
+    return render_template("index.html")
 
 @app.route("/health")
 def health():
-    try:
-        success = load_models()
-        return jsonify({
-            "status": "healthy" if success else "error",
-            "message": "Server is running" if success else "Failed to load models",
-            "models_loaded": success,
-            "python_version": os.sys.version
-        })
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "running", "models_loaded": load_models()})
 
-@app.route("/predict", methods=["POST", "GET"])
+@app.route("/predict", methods=["POST"])
 def predict():
-    if request.method == "GET":
-        return jsonify({
-            "message": "Kirim POST request dengan parameter 'query' atau upload file",
-            "example": {
-                "POST": "/predict",
-                "body": {"query": "text to check"},
-                "atau": "upload file dengan key 'file'"
-            }
-        })
-    
     try:
         query = ""
-        
-        if 'file' in request.files:
-            file = request.files['file']
-            if file.filename != '':
-                if hasattr(file, 'content_length') and file.content_length and file.content_length > 10 * 1024 * 1024:
-                    return jsonify({"error": "File terlalu besar (maks 10MB)"}), 400
+
+        if "file" in request.files:
+            file = request.files["file"]
+            if file.filename != "":
                 query = extract_text_from_file(file)
-            else:
-                query = request.form.get("query", "").strip()
-                if not query:
-                    query = request.form.get("text_input", "").strip()
-        else:
-            if request.is_json:
-                data = request.get_json()
-                query = data.get("query", data.get("text_input", "")).strip()
-            else:
-                query = request.form.get("query", request.form.get("text_input", "")).strip()
-        
+
+        if not query:
+            query = request.form.get("query", "").strip()
+
         if not query:
             return jsonify({"error": "Tidak ada teks yang diberikan"}), 400
-        
-        if len(query) < 10:
-            return jsonify({"error": "Teks terlalu pendek (minimal 10 karakter)"}), 400
-        
-        results = check_plagiarism(query, top_k=10)
-        
-        response_data = {
-            "query_length": len(query),
-            "query_preview": query[:200] + "..." if len(query) > 200 else query,
-            "results": []
-        }
-        
-        for r in results:
-            response_data["results"].append({
-                "index": r["index"],
-                "title": r["title"],
-                "url": r["url"],
-                "pdf": r["pdf"],
-                "abstract": r["abstract"],
-                "semantic": round(r["semantic"], 4),
-                "lexical": round(r["lexical"], 4),
-                "structure": round(r["structure"], 4),
-                "final_score": round(r["final_score"], 4),
-                "similarity": round(r["similarity"], 2)
-            })
-        
-        return jsonify(response_data)
-        
-    except Exception as e:
-        print(f"Error di /predict: {str(e)}")
-        traceback.print_exc()
-        return jsonify({"error": f"Terjadi kesalahan: {str(e)}"}), 500
 
-@app.route('/static/<path:path>')
-def serve_static(path):
+        results = check_plagiarism(query, top_k=10)
+
+        return jsonify({
+            "query_length": len(query),
+            "results": results
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/static/<path:path>")
+def static_files(path):
     return send_from_directory(static_dir, path)
 
-# Error handlers
-@app.errorhandler(404)
-def not_found(e):
-    return jsonify({
-        "error": "Endpoint tidak ditemukan", 
-        "available_endpoints": ["/", "/health", "/predict"]
-    }), 404
 
-@app.errorhandler(500)
-def internal_error(e):
-    return jsonify({"error": "Terjadi kesalahan internal server"}), 500
-
-# Wajib ada untuk Vercel
-app = app
+# ---------------------------
+# RUN SERVER (WAJIB UNTUK RAILWAY)
+# ---------------------------
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
